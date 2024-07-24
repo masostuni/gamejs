@@ -366,7 +366,7 @@
 
         window.addEventListener('keyup', (event) => {
             if (event.code === 'ArrowRight' || event.code === 'ArrowLeft') {
-                player.velocityX = 0;
+                continuousRightMovement = true; // Allow right movement after key is released
                 clearTimeout(player.continuousMovementTimeout);
                 player.continuousMovementTimeout = setTimeout(() => {
                     continuousRightMovement = true;
@@ -379,13 +379,14 @@
         });
 
         canvas.addEventListener('touchstart', (event) => {
+            event.preventDefault(); // Prevent scrolling on touch devices
             handleTapOrClick(event);
         });
 
         function handleTapOrClick(event) {
             const rect = canvas.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
+            const x = (event.clientX || event.touches[0].clientX) - rect.left;
+            const y = (event.clientY || event.touches[0].clientY) - rect.top;
 
             if (bossActive) {
                 boss.enemies.forEach((enemy, index) => {
@@ -404,6 +405,9 @@
                         enemies.splice(index, 1);
                     }
                 });
+
+                // Allow player to jump on tap
+                player.jump();
             }
         }
     </script>
