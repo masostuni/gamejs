@@ -1,1 +1,1 @@
-# gamejs
+https://masostuni.github.io/gamejs/
