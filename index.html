@@ -119,6 +119,9 @@
                                 platform.isNew = false;
                                 platformCount++;
                                 updateInfo();
+                                if (platformCount >= 10 && !bossActive) {
+                                    spawnBoss();
+                                }
                             }
                         }
                     }
@@ -132,9 +135,6 @@
                         this.y + this.height > collectible.y) {
                         collectibles.splice(index, 1);
                         collectibleCount++;
-                        if (platformCount >= 20 && !bossActive) {
-                            spawnBoss();
-                        }
                         updateInfo();
                     }
                 });
@@ -239,7 +239,7 @@
             }
 
             draw() {
-                this.enemies.forEach(enemy => enemy.draw());
+                ctx.drawImage(bossImage, canvas.width / 2 - 100, canvas.height / 2 - 100, 200, 200);
             }
 
             update() {
