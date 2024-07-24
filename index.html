@@ -14,7 +14,7 @@
             background-color: skyblue;
             display: block;
         }
-        #countdown {
+        #info {
             position: absolute;
             top: 10px;
             left: 10px;
@@ -28,7 +28,7 @@
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
-    <div id="countdown">Joint: 0</div>
+    <div id="info">Joint: 0 | Cimette: 0</div>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -118,7 +118,7 @@
                             if (platform.isNew) {
                                 platform.isNew = false;
                                 platformCount++;
-                                updateCountdown();
+                                updateInfo();
                             }
                         }
                     }
@@ -132,9 +132,10 @@
                         this.y + this.height > collectible.y) {
                         collectibles.splice(index, 1);
                         collectibleCount++;
-                        if (collectibleCount >= 10 && !bossActive) {
+                        if (platformCount >= 20 && !bossActive) {
                             spawnBoss();
                         }
+                        updateInfo();
                     }
                 });
 
@@ -170,7 +171,7 @@
                 collectibles.length = 0;
                 enemies.length = 0;
                 generateInitialPlatforms();
-                updateCountdown();
+                updateInfo();
             }
         }
 
@@ -249,7 +250,7 @@
                 this.isDefeated = true;
                 continuousRightMovement = true;
                 platformCount += 400;
-                updateCountdown();
+                updateInfo();
             }
         }
 
@@ -261,7 +262,7 @@
 
         function generatePlatform(x, y, width, height) {
             platforms.push(new Platform(x, y, width, height));
-            updateCountdown();
+            updateInfo();
         }
 
         function generateCollectible(x, y, size) {
@@ -302,8 +303,8 @@
             continuousRightMovement = false;
         }
 
-        function updateCountdown() {
-            document.getElementById('countdown').innerText = `Joint: ${platformCount}`;
+        function updateInfo() {
+            document.getElementById('info').innerText = `Joint: ${platformCount} | Cimette: ${collectibleCount}`;
         }
 
         function checkWinCondition() {
@@ -373,14 +374,6 @@
             }
         });
 
-        canvas.addEventListener('click', () => {
-            player.jump();
-        });
-
-        canvas.addEventListener('touchstart', () => {
-            player.jump();
-        });
-
         canvas.addEventListener('click', (event) => {
             handleTapOrClick(event);
         });
@@ -390,10 +383,14 @@
         });
 
         function handleTapOrClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
             if (bossActive) {
                 boss.enemies.forEach((enemy, index) => {
-                    if (event.clientX >= enemy.x && event.clientX <= enemy.x + enemy.size &&
-                        event.clientY >= enemy.y && event.clientY <= enemy.y + enemy.size) {
+                    if (x >= enemy.x && x <= enemy.x + enemy.size &&
+                        y >= enemy.y && y <= enemy.y + enemy.size) {
                         boss.enemies.splice(index, 1);
                         if (boss.enemies.length === 0) {
                             boss.defeat();
@@ -402,8 +399,8 @@
                 });
             } else {
                 enemies.forEach((enemy, index) => {
-                    if (event.clientX >= enemy.x && event.clientX <= enemy.x + enemy.size &&
-                        event.clientY >= enemy.y && event.clientY <= enemy.y + enemy.size) {
+                    if (x >= enemy.x && x <= enemy.x + enemy.size &&
+                        y >= enemy.y && y <= enemy.y + enemy.size) {
                         enemies.splice(index, 1);
                     }
                 });
