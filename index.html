@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Joint</title>
+    <title>Super Joint Bros</title>
     <style>
         body {
             margin: 0;
@@ -28,7 +28,7 @@
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
-    <div id="countdown">Piattaforme superate: 0</div>
+    <div id="countdown">Joint: 0</div>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -55,7 +55,10 @@
             'enemy2.png',
             'enemy3.png',
             'enemy4.png',
-            'enemy5.png'
+            'enemy5.png',
+            'enemy6.png',
+            'enemy7.png',
+            'enemy8.png'
         ].map(src => {
             const img = new Image();
             img.src = src;
@@ -195,7 +198,7 @@
             constructor(x, y, size, type) {
                 this.x = x;
                 this.y = y;
-                this.size = size * 4; // Quattro volte più grande
+                this.size = size * 2; // due volte più grande
                 this.type = type;
                 this.directionX = Math.random() > 0.5 ? 1 : -1;
                 this.directionY = Math.random() > 0.5 ? 1 : -1;
@@ -261,7 +264,7 @@
         }
 
         function generateEnemy(x, y, size) {
-            const type = Math.floor(Math.random() * 5); // Random type between 0 and 4
+            const type = Math.floor(Math.random() * 5); // Random type between 0 and 8
             enemies.push(new Enemy(x, y, size, type));
         }
 
@@ -295,7 +298,7 @@
         }
 
         function updateCountdown() {
-            document.getElementById('countdown').innerText = `Piattaforme superate: ${platformCount}`;
+            document.getElementById('countdown').innerText = `Joint: ${platformCount}`;
             if (platformCount >= 100) {
                 alert('Hai vinto!');
                 player.reset();
@@ -304,6 +307,10 @@
 
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update camera position
+            const cameraX = player.x - canvas.width / 4;
+            ctx.translate(-cameraX, 0);
 
             player.update();
             player.draw();
@@ -333,6 +340,8 @@
             if (platforms.length < 20 && !bossActive) {
                 generateRandomPlatform();
             }
+
+            ctx.translate(cameraX, 0);
 
             requestAnimationFrame(animate);
         }
