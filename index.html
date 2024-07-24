@@ -119,7 +119,7 @@
                                 platform.isNew = false;
                                 platformCount++;
                                 updateInfo();
-                                if (platformCount >= 10 && !bossActive) {
+                                if (platformCount >= 20 && !bossActive) {
                                     spawnBoss();
                                 }
                             }
@@ -232,18 +232,19 @@
 
         class Boss {
             constructor() {
-                this.enemies = enemyImages.slice(0, 8).map((image, index) => {
-                    return new Enemy(canvas.width / 2 - 50, canvas.height / 2 - 50 * (index + 1), 30, index);
-                });
+                this.x = canvas.width / 2 - 100;
+                this.y = canvas.height / 2 - 100;
+                this.width = 200;
+                this.height = 200;
                 this.isDefeated = false;
             }
 
             draw() {
-                ctx.drawImage(bossImage, canvas.width / 2 - 100, canvas.height / 2 - 100, 200, 200);
+                ctx.drawImage(bossImage, this.x, this.y, this.width, this.height);
             }
 
             update() {
-                this.enemies.forEach(enemy => enemy.update());
+                // Boss non si muove
             }
 
             defeat() {
@@ -270,7 +271,7 @@
         }
 
         function generateEnemy(x, y, size) {
-            const type = Math.floor(Math.random() * 8); // Random type between 0 and 7
+            const type = Math.floor(Math.random() * enemyImages.length); // Random type between 0 and length of enemyImages
             enemies.push(new Enemy(x, y, size, type));
         }
 
@@ -389,15 +390,10 @@
             const y = (event.clientY || event.touches[0].clientY) - rect.top;
 
             if (bossActive) {
-                boss.enemies.forEach((enemy, index) => {
-                    if (x >= enemy.x && x <= enemy.x + enemy.size &&
-                        y >= enemy.y && y <= enemy.y + enemy.size) {
-                        boss.enemies.splice(index, 1);
-                        if (boss.enemies.length === 0) {
-                            boss.defeat();
-                        }
-                    }
-                });
+                if (x >= boss.x && x <= boss.x + boss.width &&
+                    y >= boss.y && y <= boss.y + boss.height) {
+                    boss.defeat();
+                }
             } else {
                 enemies.forEach((enemy, index) => {
                     if (x >= enemy.x && x <= enemy.x + enemy.size &&
