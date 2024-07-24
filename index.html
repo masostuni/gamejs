@@ -1,165 +1,210 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple JavaScript Game</title>
+    <title>Gioco tipo Super Mario</title>
     <style>
         body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             margin: 0;
-            background-color: #f0f0f0;
-            font-family: Arial, sans-serif;
+            overflow: hidden;
         }
-
-        #game-container {
-            text-align: center;
-        }
-
-        #gameCanvas {
-            background-color: #000;
-            border: 2px solid #fff;
-        }
-
-        #startButton {
-            margin-top: 10px;
-            padding: 10px 20px;
-            font-size: 16px;
+        canvas {
+            background-color: skyblue;
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="400"></canvas>
-        <button id="startButton">Start Game</button>
-    </div>
+    <canvas id="gameCanvas"></canvas>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const startButton = document.getElementById('startButton');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-        let player, obstacles, animationFrameId;
-        let gameRunning = false;
+        const gravity = 0.5;
 
-        // Player class
         class Player {
-            constructor(x, y, width, height, color) {
-                this.x = x;
-                this.y = y;
-                this.width = width;
-                this.height = height;
-                this.color = color;
-                this.speed = 5;
-                this.dy = 0;
+            constructor() {
+                this.width = 50;
+                this.height = 50;
+                this.x = 100;
+                this.y = canvas.height - this.height;
+                this.velocityY = 0;
+                this.velocityX = 0;
+                this.isJumping = false;
+                this.isFalling = false;
             }
 
             draw() {
-                ctx.fillStyle = this.color;
+                ctx.fillStyle = 'red';
                 ctx.fillRect(this.x, this.y, this.width, this.height);
             }
 
             update() {
-                if (this.y + this.dy > 0 && this.y + this.height + this.dy < canvas.height) {
-                    this.y += this.dy;
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+
+                if (this.y + this.height < canvas.height) {
+                    this.velocityY += gravity;
+                    this.isFalling = true;
+                } else {
+                    this.velocityY = 0;
+                    this.isJumping = false;
+                    this.isFalling = false;
+                    this.y = canvas.height - this.height;
+                }
+
+                // Collision with platforms
+                platforms.forEach(platform => {
+                    if (this.x < platform.x + platform.width &&
+                        this.x + this.width > platform.x &&
+                        this.y < platform.y + platform.height &&
+                        this.y + this.height > platform.y) {
+                        if (this.y + this.height - this.velocityY <= platform.y) {
+                            this.velocityY = 0;
+                            this.isJumping = false;
+                            this.isFalling = false;
+                            this.y = platform.y - this.height;
+                        }
+                    }
+                });
+
+                // Collision with collectibles
+                collectibles.forEach((collectible, index) => {
+                    if (this.x < collectible.x + collectible.size &&
+                        this.x + this.width > collectible.x &&
+                        this.y < collectible.y + collectible.size &&
+                        this.y + this.height > collectible.y) {
+                        collectibles.splice(index, 1);
+                    }
+                });
+
+                // Collision with enemies
+                enemies.forEach(enemy => {
+                    if (this.x < enemy.x + enemy.size &&
+                        this.x + this.width > enemy.x &&
+                        this.y < enemy.y + enemy.size &&
+                        this.y + this.height > enemy.y) {
+                        // Simple collision response
+                        console.log('Game Over');
+                        this.reset();
+                    }
+                });
+            }
+
+            jump() {
+                if (!this.isJumping && !this.isFalling) {
+                    this.velocityY = -15;
+                    this.isJumping = true;
+                }
+            }
+
+            reset() {
+                this.x = 100;
+                this.y = canvas.height - this.height;
+                this.velocityY = 0;
+                this.velocityX = 0;
+            }
+        }
+
+        class Platform {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+            }
+
+            draw() {
+                ctx.fillStyle = 'green';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        class Collectible {
+            constructor(x, y, size) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+            }
+
+            draw() {
+                ctx.fillStyle = 'gold';
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+
+        class Enemy {
+            constructor(x, y, size) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.direction = 1;
+            }
+
+            draw() {
+                ctx.fillStyle = 'purple';
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+
+            update() {
+                this.x += this.direction;
+                if (this.x + this.size > canvas.width || this.x < 0) {
+                    this.direction *= -1;
                 }
             }
         }
 
-        // Obstacle class
-        class Obstacle {
-            constructor(x, y, width, height, color) {
-                this.x = x;
-                this.y = y;
-                this.width = width;
-                this.height = height;
-                this.color = color;
-                this.speed = 3;
-            }
-
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            }
-
-            update() {
-                this.x -= this.speed;
-            }
-        }
-
-        function createObstacles() {
-            const obstacleWidth = 20;
-            const obstacleHeight = Math.random() * (canvas.height - 20) + 20;
-            const obstacleX = canvas.width;
-            const obstacleY = Math.random() < 0.5 ? 0 : canvas.height - obstacleHeight;
-
-            return new Obstacle(obstacleX, obstacleY, obstacleWidth, obstacleHeight, 'red');
-        }
-
-        function init() {
-            player = new Player(50, canvas.height / 2 - 25, 50, 50, 'blue');
-            obstacles = [];
-            gameRunning = true;
-            animate();
-        }
+        const player = new Player();
+        const platforms = [
+            new Platform(100, canvas.height - 100, 200, 20),
+            new Platform(400, canvas.height - 200, 200, 20),
+            new Platform(700, canvas.height - 300, 200, 20)
+        ];
+        const collectibles = [
+            new Collectible(150, canvas.height - 150, 20),
+            new Collectible(450, canvas.height - 250, 20),
+            new Collectible(750, canvas.height - 350, 20)
+        ];
+        const enemies = [
+            new Enemy(300, canvas.height - 70, 30),
+            new Enemy(600, canvas.height - 170, 30)
+        ];
 
         function animate() {
-            if (!gameRunning) return;
-
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            player.draw();
             player.update();
+            player.draw();
 
-            if (Math.random() < 0.01) {
-                obstacles.push(createObstacles());
-            }
-
-            obstacles.forEach((obstacle, index) => {
-                obstacle.draw();
-                obstacle.update();
-
-                // Check collision
-                if (
-                    player.x < obstacle.x + obstacle.width &&
-                    player.x + player.width > obstacle.x &&
-                    player.y < obstacle.y + obstacle.height &&
-                    player.y + player.height > obstacle.y
-                ) {
-                    gameRunning = false;
-                    cancelAnimationFrame(animationFrameId);
-                    alert('Game Over!');
-                }
-
-                // Remove off-screen obstacles
-                if (obstacle.x + obstacle.width < 0) {
-                    obstacles.splice(index, 1);
-                }
+            platforms.forEach(platform => platform.draw());
+            collectibles.forEach(collectible => collectible.draw());
+            enemies.forEach(enemy => {
+                enemy.update();
+                enemy.draw();
             });
 
-            animationFrameId = requestAnimationFrame(animate);
+            requestAnimationFrame(animate);
         }
 
-        // Controls
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowUp') {
-                player.dy = -player.speed;
-            } else if (e.key === 'ArrowDown') {
-                player.dy = player.speed;
+        animate();
+
+        window.addEventListener('keydown', (event) => {
+            if (event.code === 'Space') {
+                player.jump();
+            }
+            if (event.code === 'ArrowRight') {
+                player.velocityX = 5;
+            }
+            if (event.code === 'ArrowLeft') {
+                player.velocityX = -5;
             }
         });
 
-        document.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                player.dy = 0;
-            }
-        });
-
-        // Start game
-        startButton.addEventListener('click', () => {
-            if (!gameRunning) {
-                init();
+        window.addEventListener('keyup', (event) => {
+            if (event.code === 'ArrowRight' || event.code === 'ArrowLeft') {
+                player.velocityX = 0;
             }
         });
     </script>
