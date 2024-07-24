@@ -51,7 +51,7 @@
             constructor() {
                 this.width = 50;
                 this.height = 50;
-                this.x = 100;
+                this.x = 0; // Partenza dalla sinistra dello schermo
                 this.y = canvas.height - this.height;
                 this.velocityY = 0;
                 this.velocityX = 0;
@@ -123,7 +123,7 @@
             }
 
             reset() {
-                this.x = 100;
+                this.x = 0; // Reset to left side
                 this.y = canvas.height - this.height;
                 this.velocityY = 0;
                 this.velocityX = 0;
@@ -164,9 +164,12 @@
             constructor(x, y, size, type) {
                 this.x = x;
                 this.y = y;
-                this.size = size;
+                this.size = size * 4; // Quattro volte più grande
                 this.type = type;
-                this.direction = 1;
+                this.directionX = Math.random() > 0.5 ? 1 : -1;
+                this.directionY = Math.random() > 0.5 ? 1 : -1;
+                this.speedX = Math.random() * 2 + 1;
+                this.speedY = Math.random() * 2 + 1;
             }
 
             draw() {
@@ -174,9 +177,14 @@
             }
 
             update() {
-                this.x += this.direction;
+                this.x += this.directionX * this.speedX;
+                this.y += this.directionY * this.speedY;
+
                 if (this.x + this.size > canvas.width || this.x < 0) {
-                    this.direction *= -1;
+                    this.directionX *= -1;
+                }
+                if (this.y + this.size > canvas.height || this.y < 0) {
+                    this.directionY *= -1;
                 }
             }
         }
