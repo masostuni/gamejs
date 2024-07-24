@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Joint Bros</title>
+    <title>Super Joint Bross</title>
     <style>
         body {
             margin: 0;
@@ -115,6 +115,11 @@
                             this.isJumping = false;
                             this.isFalling = false;
                             this.y = platform.y - this.height;
+                            if (platform.isNew) {
+                                platform.isNew = false;
+                                platformCount++;
+                                updateCountdown();
+                            }
                         }
                     }
                 });
@@ -175,6 +180,7 @@
                 this.y = y;
                 this.width = width;
                 this.height = height;
+                this.isNew = true; // Flag per contare le piattaforme superate
             }
 
             draw() {
@@ -198,7 +204,7 @@
             constructor(x, y, size, type) {
                 this.x = x;
                 this.y = y;
-                this.size = size * 2; // due volte più grande
+                this.size = size * 2; // Due volte più grande
                 this.type = type;
                 this.directionX = Math.random() > 0.5 ? 1 : -1;
                 this.directionY = Math.random() > 0.5 ? 1 : -1;
@@ -225,7 +231,7 @@
 
         class Boss {
             constructor() {
-                this.enemies = enemyImages.map((image, index) => {
+                this.enemies = enemyImages.slice(0, 8).map((image, index) => {
                     return new Enemy(canvas.width / 2 - 50, canvas.height / 2 - 50 * (index + 1), 30, index);
                 });
                 this.isDefeated = false;
@@ -255,7 +261,6 @@
 
         function generatePlatform(x, y, width, height) {
             platforms.push(new Platform(x, y, width, height));
-            platformCount++;
             updateCountdown();
         }
 
@@ -264,7 +269,7 @@
         }
 
         function generateEnemy(x, y, size) {
-            const type = Math.floor(Math.random() * 5); // Random type between 0 and 8
+            const type = Math.floor(Math.random() * 8); // Random type between 0 and 7
             enemies.push(new Enemy(x, y, size, type));
         }
 
@@ -283,22 +288,25 @@
             generatePlatform(x, y, width, height);
 
             if (Math.random() > 0.5) {
-                generateCollectible(x + width / 2, y - 30, 20);
+                generateCollectible(x + width / 2, y - 30, 30);
             }
 
-            if (Math.random() > 0.3) {
-                generateEnemy(x + width / 2, y - 30, 30);
+            if (Math.random() > 0.7) {
+                generateEnemy(x + width / 2, y - 50, 30);
             }
         }
 
         function spawnBoss() {
             bossActive = true;
-            continuousRightMovement = false;
             boss = new Boss();
+            continuousRightMovement = false;
         }
 
         function updateCountdown() {
             document.getElementById('countdown').innerText = `Joint: ${platformCount}`;
+        }
+
+        function checkWinCondition() {
             if (platformCount >= 100) {
                 alert('Hai vinto!');
                 player.reset();
@@ -317,14 +325,13 @@
 
             platforms.forEach(platform => platform.draw());
             collectibles.forEach(collectible => collectible.draw());
-            enemies.forEach((enemy, index) => {
+            enemies.forEach(enemy => {
                 enemy.update();
                 enemy.draw();
             });
 
-            if (platformCount >= 100) {
-                alert('Hai vinto!');
-                player.reset();
+            if (platforms.length < 20 && !bossActive) {
+                generateRandomPlatform();
             }
 
             if (bossActive) {
@@ -337,13 +344,10 @@
                 }
             }
 
-            if (platforms.length < 20 && !bossActive) {
-                generateRandomPlatform();
-            }
-
             ctx.translate(cameraX, 0);
 
             requestAnimationFrame(animate);
+            checkWinCondition();
         }
 
         generateInitialPlatforms();
@@ -356,16 +360,6 @@
                 continuousRightMovement = true;
             } else if (event.code === 'ArrowLeft') {
                 continuousRightMovement = false;
-            }
-        });
-
-        window.addEventListener('keydown', (event) => {
-            if (event.code === 'ArrowRight' || event.code === 'ArrowLeft') {
-                continuousRightMovement = false;
-                clearTimeout(player.continuousMovementTimeout);
-                player.continuousMovementTimeout = setTimeout(() => {
-                    continuousRightMovement = true;
-                }, 2000);
             }
         });
 
