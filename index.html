@@ -8,15 +8,27 @@
         body {
             margin: 0;
             overflow: hidden;
+            font-family: Arial, sans-serif;
         }
         canvas {
             background-color: skyblue;
             display: block;
         }
+        #countdown {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    <div id="countdown">Piattaforme superate: 0</div>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -25,7 +37,9 @@
 
         const gravity = 0.5;
         let platformCount = 0;
+        let collectibleCount = 0;
         let continuousRightMovement = true;
+        let bossActive = false;
 
         const playerImg = new Image();
         playerImg.src = 'player.png';
@@ -48,6 +62,9 @@
             return img;
         });
 
+        const bossImage = new Image();
+        bossImage.src = 'boss.png';
+
         class Player {
             constructor() {
                 this.width = 50;
@@ -65,8 +82,10 @@
             }
 
             update() {
-                if (continuousRightMovement) {
+                if (continuousRightMovement && !bossActive) {
                     this.velocityX = 2; // Movimento continuo verso destra
+                } else if (!bossActive) {
+                    this.velocityX = 0;
                 }
 
                 this.x += this.velocityX;
@@ -104,11 +123,15 @@
                         this.y < collectible.y + collectible.size &&
                         this.y + this.height > collectible.y) {
                         collectibles.splice(index, 1);
+                        collectibleCount++;
+                        if (collectibleCount >= 10 && !bossActive) {
+                            spawnBoss();
+                        }
                     }
                 });
 
                 // Collision with enemies
-                enemies.forEach(enemy => {
+                enemies.forEach((enemy, index) => {
                     if (this.x < enemy.x + enemy.size &&
                         this.x + this.width > enemy.x &&
                         this.y < enemy.y + enemy.size &&
@@ -134,10 +157,12 @@
                 this.velocityX = 2; // Reset continuous movement
                 continuousRightMovement = true;
                 platformCount = 0;
+                collectibleCount = 0;
                 platforms.length = 0;
                 collectibles.length = 0;
                 enemies.length = 0;
                 generateInitialPlatforms();
+                updateCountdown();
             }
         }
 
@@ -170,7 +195,7 @@
             constructor(x, y, size, type) {
                 this.x = x;
                 this.y = y;
-                this.size = size * 2; // due volte più grande
+                this.size = size * 4; // Quattro volte più grande
                 this.type = type;
                 this.directionX = Math.random() > 0.5 ? 1 : -1;
                 this.directionY = Math.random() > 0.5 ? 1 : -1;
@@ -195,14 +220,40 @@
             }
         }
 
+        class Boss {
+            constructor() {
+                this.enemies = enemyImages.map((image, index) => {
+                    return new Enemy(canvas.width / 2 - 50, canvas.height / 2 - 50 * (index + 1), 30, index);
+                });
+                this.isDefeated = false;
+            }
+
+            draw() {
+                this.enemies.forEach(enemy => enemy.draw());
+            }
+
+            update() {
+                this.enemies.forEach(enemy => enemy.update());
+            }
+
+            defeat() {
+                this.isDefeated = true;
+                continuousRightMovement = true;
+                platformCount += 400;
+                updateCountdown();
+            }
+        }
+
         const player = new Player();
         const platforms = [];
         const collectibles = [];
         const enemies = [];
+        let boss = null;
 
         function generatePlatform(x, y, width, height) {
             platforms.push(new Platform(x, y, width, height));
             platformCount++;
+            updateCountdown();
         }
 
         function generateCollectible(x, y, size) {
@@ -229,67 +280,79 @@
             generatePlatform(x, y, width, height);
 
             if (Math.random() > 0.5) {
-                generateCollectible(x + width / 2 - 10, y - 30, 20);
+                generateCollectible(x + width / 2, y - 30, 20);
             }
 
-            if (Math.random() > 0.5) {
-                generateEnemy(x + width / 2 - 15, y - 30, 30);
+            if (Math.random() > 0.3) {
+                generateEnemy(x + width / 2, y - 30, 30);
             }
         }
 
-        generateInitialPlatforms();
+        function spawnBoss() {
+            bossActive = true;
+            continuousRightMovement = false;
+            boss = new Boss();
+        }
+
+        function updateCountdown() {
+            document.getElementById('countdown').innerText = `Piattaforme superate: ${platformCount}`;
+            if (platformCount >= 100) {
+                alert('Hai vinto!');
+                player.reset();
+            }
+        }
 
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Camera follow player
-            const translateX = -player.x + canvas.width / 2;
-            ctx.save();
-            ctx.translate(translateX, 0);
 
             player.update();
             player.draw();
 
             platforms.forEach(platform => platform.draw());
             collectibles.forEach(collectible => collectible.draw());
-            enemies.forEach(enemy => {
+            enemies.forEach((enemy, index) => {
                 enemy.update();
                 enemy.draw();
             });
 
-            ctx.restore();
-
-            // Generate new platforms as the player moves to the right
-            if (player.x > platforms[platforms.length - 1].x - 400) {
-                generateRandomPlatform();
+            if (platformCount >= 100) {
+                alert('Hai vinto!');
+                player.reset();
             }
 
-            // Check for win condition
-            if (platformCount >= 1000) {
-                alert('Hai vinto! Hai superato 1000 piattaforme!');
-                player.reset();
+            if (bossActive) {
+                if (boss.isDefeated) {
+                    bossActive = false;
+                    boss = null;
+                } else {
+                    boss.update();
+                    boss.draw();
+                }
+            }
+
+            if (platforms.length < 20 && !bossActive) {
+                generateRandomPlatform();
             }
 
             requestAnimationFrame(animate);
         }
 
+        generateInitialPlatforms();
         animate();
 
         window.addEventListener('keydown', (event) => {
-            if (event.code === 'Space') {
+            if (event.code === 'Space' || event.code === 'ArrowUp') {
                 player.jump();
-            }
-            if (event.code === 'ArrowRight') {
+            } else if (event.code === 'ArrowRight') {
+                continuousRightMovement = true;
+            } else if (event.code === 'ArrowLeft') {
                 continuousRightMovement = false;
-                player.velocityX = 5;
-                clearTimeout(player.continuousMovementTimeout);
-                player.continuousMovementTimeout = setTimeout(() => {
-                    continuousRightMovement = true;
-                }, 2000);
             }
-            if (event.code === 'ArrowLeft') {
+        });
+
+        window.addEventListener('keydown', (event) => {
+            if (event.code === 'ArrowRight' || event.code === 'ArrowLeft') {
                 continuousRightMovement = false;
-                player.velocityX = -5;
                 clearTimeout(player.continuousMovementTimeout);
                 player.continuousMovementTimeout = setTimeout(() => {
                     continuousRightMovement = true;
@@ -314,6 +377,35 @@
         canvas.addEventListener('touchstart', () => {
             player.jump();
         });
+
+        canvas.addEventListener('click', (event) => {
+            handleTapOrClick(event);
+        });
+
+        canvas.addEventListener('touchstart', (event) => {
+            handleTapOrClick(event);
+        });
+
+        function handleTapOrClick(event) {
+            if (bossActive) {
+                boss.enemies.forEach((enemy, index) => {
+                    if (event.clientX >= enemy.x && event.clientX <= enemy.x + enemy.size &&
+                        event.clientY >= enemy.y && event.clientY <= enemy.y + enemy.size) {
+                        boss.enemies.splice(index, 1);
+                        if (boss.enemies.length === 0) {
+                            boss.defeat();
+                        }
+                    }
+                });
+            } else {
+                enemies.forEach((enemy, index) => {
+                    if (event.clientX >= enemy.x && event.clientX <= enemy.x + enemy.size &&
+                        event.clientY >= enemy.y && event.clientY <= enemy.y + enemy.size) {
+                        enemies.splice(index, 1);
+                    }
+                });
+            }
+        }
     </script>
 </body>
 </html>
