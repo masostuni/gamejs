@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gioco tipo Super Mario</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            background-color: skyblue;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gravity = 0.5;
+        let platformCount = 0;
+        let continuousRightMovement = true;
+
+        const playerImg = new Image();
+        playerImg.src = 'player.png';
+
+        const platformImg = new Image();
+        platformImg.src = 'platform.png';
+
+        const collectibleImg = new Image();
+        collectibleImg.src = 'collectible.png';
+
+        const enemyImages = [
+            'enemy1.png',
+            'enemy2.png',
+            'enemy3.png',
+            'enemy4.png',
+            'enemy5.png'
+        ].map(src => {
+            const img = new Image();
+            img.src = src;
+            return img;
+        });
+
+        class Player {
+            constructor() {
+                this.width = 50;
+                this.height = 50;
+                this.x = 0; // Partenza dalla sinistra dello schermo
+                this.y = canvas.height - this.height;
+                this.velocityY = 0;
+                this.velocityX = 2; // Movimento continuo verso destra
+                this.isJumping = false;
+                this.isFalling = false;
+            }
+
+            draw() {
+                ctx.drawImage(playerImg, this.x, this.y, this.width, this.height);
+            }
+
+            update() {
+                if (continuousRightMovement) {
+                    this.velocityX = 2; // Movimento continuo verso destra
+                }
+
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+
+                if (this.y + this.height < canvas.height) {
+                    this.velocityY += gravity;
+                    this.isFalling = true;
+                } else {
+                    this.velocityY = 0;
+                    this.isJumping = false;
+                    this.isFalling = false;
+                    this.y = canvas.height - this.height;
+                }
+
+                // Collision with platforms
+                platforms.forEach(platform => {
+                    if (this.x < platform.x + platform.width &&
+                        this.x + this.width > platform.x &&
+                        this.y < platform.y + platform.height &&
+                        this.y + this.height > platform.y) {
+                        if (this.y + this.height - this.velocityY <= platform.y) {
+                            this.velocityY = 0;
+                            this.isJumping = false;
+                            this.isFalling = false;
+                            this.y = platform.y - this.height;
+                        }
+                    }
+                });
+
+                // Collision with collectibles
+                collectibles.forEach((collectible, index) => {
+                    if (this.x < collectible.x + collectible.size &&
+                        this.x + this.width > collectible.x &&
+                        this.y < collectible.y + collectible.size &&
+                        this.y + this.height > collectible.y) {
+                        collectibles.splice(index, 1);
+                    }
+                });
+
+                // Collision with enemies
+                enemies.forEach(enemy => {
+                    if (this.x < enemy.x + enemy.size &&
+                        this.x + this.width > enemy.x &&
+                        this.y < enemy.y + enemy.size &&
+                        this.y + this.height > enemy.y) {
+                        // Simple collision response
+                        console.log('Game Over');
+                        this.reset();
+                    }
+                });
+            }
+
+            jump() {
+                if (!this.isJumping && !this.isFalling) {
+                    this.velocityY = -15;
+                    this.isJumping = true;
+                }
+            }
+
+            reset() {
+                this.x = 0; // Reset to left side
+                this.y = canvas.height - this.height;
+                this.velocityY = 0;
+                this.velocityX = 2; // Reset continuous movement
+                continuousRightMovement = true;
+                platformCount = 0;
+                platforms.length = 0;
+                collectibles.length = 0;
+                enemies.length = 0;
+                generateInitialPlatforms();
+            }
+        }
+
+        class Platform {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+            }
+
+            draw() {
+                ctx.drawImage(platformImg, this.x, this.y, this.width, this.height);
+            }
+        }
+
+        class Collectible {
+            constructor(x, y, size) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+            }
+
+            draw() {
+                ctx.drawImage(collectibleImg, this.x, this.y, this.size, this.size);
+            }
+        }
+
+        class Enemy {
+            constructor(x, y, size, type) {
+                this.x = x;
+                this.y = y;
+                this.size = size * 4; // Quattro volte più grande
+                this.type = type;
+                this.directionX = Math.random() > 0.5 ? 1 : -1;
+                this.directionY = Math.random() > 0.5 ? 1 : -1;
+                this.speedX = Math.random() * 2 + 1;
+                this.speedY = Math.random() * 2 + 1;
+            }
+
+            draw() {
+                ctx.drawImage(enemyImages[this.type], this.x, this.y, this.size, this.size);
+            }
+
+            update() {
+                this.x += this.directionX * this.speedX;
+                this.y += this.directionY * this.speedY;
+
+                if (this.x + this.size > canvas.width || this.x < 0) {
+                    this.directionX *= -1;
+                }
+                if (this.y + this.size > canvas.height || this.y < 0) {
+                    this.directionY *= -1;
+                }
+            }
+        }
+
+        const player = new Player();
+        const platforms = [];
+        const collectibles = [];
+        const enemies = [];
+
+        function generatePlatform(x, y, width, height) {
+            platforms.push(new Platform(x, y, width, height));
+            platformCount++;
+        }
+
+        function generateCollectible(x, y, size) {
+            collectibles.push(new Collectible(x, y, size));
+        }
+
+        function generateEnemy(x, y, size) {
+            const type = Math.floor(Math.random() * 5); // Random type between 0 and 4
+            enemies.push(new Enemy(x, y, size, type));
+        }
+
+        function generateInitialPlatforms() {
+            generatePlatform(100, canvas.height - 100, 200, 20);
+            generatePlatform(400, canvas.height - 200, 200, 20);
+            generatePlatform(700, canvas.height - 300, 200, 20);
+        }
+
+        function generateRandomPlatform() {
+            const lastPlatform = platforms[platforms.length - 1];
+            const x = lastPlatform.x + Math.random() * 200 + 200;
+            const y = canvas.height - Math.random() * 300 - 100;
+            const width = 200;
+            const height = 20;
+            generatePlatform(x, y, width, height);
+
+            if (Math.random() > 0.5) {
+                generateCollectible(x + width / 2 - 10, y - 30, 20);
+            }
+
+            if (Math.random() > 0.5) {
+                generateEnemy(x + width / 2 - 15, y - 30, 30);
+            }
+        }
+
+        generateInitialPlatforms();
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Camera follow player
+            const translateX = -player.x + canvas.width / 2;
+            ctx.save();
+            ctx.translate(translateX, 0);
+
+            player.update();
+            player.draw();
+
+            platforms.forEach(platform => platform.draw());
+            collectibles.forEach(collectible => collectible.draw());
+            enemies.forEach(enemy => {
+                enemy.update();
+                enemy.draw();
+            });
+
+            ctx.restore();
+
+            // Generate new platforms as the player moves to the right
+            if (player.x > platforms[platforms.length - 1].x - 400) {
+                generateRandomPlatform();
+            }
+
+            // Check for win condition
+            if (platformCount >= 1000) {
+                alert('Hai vinto! Hai superato 1000 piattaforme!');
+                player.reset();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        window.addEventListener('keydown', (event) => {
+            if (event.code === 'Space') {
+                player.jump();
+            }
+            if (event.code === 'ArrowRight') {
+                continuousRightMovement = false;
+                player.velocityX = 5;
+                clearTimeout(player.continuousMovementTimeout);
+                player.continuousMovementTimeout = setTimeout(() => {
+                    continuousRightMovement = true;
+                }, 2000);
+            }
+            if (event.code === 'ArrowLeft') {
+                continuousRightMovement = false;
+                player.velocityX = -5;
+                clearTimeout(player.continuousMovementTimeout);
+                player.continuousMovementTimeout = setTimeout(() => {
+                    continuousRightMovement = true;
+                }, 2000);
+            }
+        });
+
+        window.addEventListener('keyup', (event) => {
+            if (event.code === 'ArrowRight' || event.code === 'ArrowLeft') {
+                player.velocityX = 0;
+                clearTimeout(player.continuousMovementTimeout);
+                player.continuousMovementTimeout = setTimeout(() => {
+                    continuousRightMovement = true;
+                }, 2000);
+            }
+        });
+
+        canvas.addEventListener('click', () => {
+            player.jump();
+        });
+
+        canvas.addEventListener('touchstart', () => {
+            player.jump();
+        });
+    </script>
+</body>
+</html>
