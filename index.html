@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple JavaScript Game</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        #game-container {
+            text-align: center;
+        }
+
+        #gameCanvas {
+            background-color: #000;
+            border: 2px solid #fff;
+        }
+
+        #startButton {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        <button id="startButton">Start Game</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startButton = document.getElementById('startButton');
+
+        let player, obstacles, animationFrameId;
+        let gameRunning = false;
+
+        // Player class
+        class Player {
+            constructor(x, y, width, height, color) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.color = color;
+                this.speed = 5;
+                this.dy = 0;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+
+            update() {
+                if (this.y + this.dy > 0 && this.y + this.height + this.dy < canvas.height) {
+                    this.y += this.dy;
+                }
+            }
+        }
+
+        // Obstacle class
+        class Obstacle {
+            constructor(x, y, width, height, color) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.color = color;
+                this.speed = 3;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+
+            update() {
+                this.x -= this.speed;
+            }
+        }
+
+        function createObstacles() {
+            const obstacleWidth = 20;
+            const obstacleHeight = Math.random() * (canvas.height - 20) + 20;
+            const obstacleX = canvas.width;
+            const obstacleY = Math.random() < 0.5 ? 0 : canvas.height - obstacleHeight;
+
+            return new Obstacle(obstacleX, obstacleY, obstacleWidth, obstacleHeight, 'red');
+        }
+
+        function init() {
+            player = new Player(50, canvas.height / 2 - 25, 50, 50, 'blue');
+            obstacles = [];
+            gameRunning = true;
+            animate();
+        }
+
+        function animate() {
+            if (!gameRunning) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            player.draw();
+            player.update();
+
+            if (Math.random() < 0.01) {
+                obstacles.push(createObstacles());
+            }
+
+            obstacles.forEach((obstacle, index) => {
+                obstacle.draw();
+                obstacle.update();
+
+                // Check collision
+                if (
+                    player.x < obstacle.x + obstacle.width &&
+                    player.x + player.width > obstacle.x &&
+                    player.y < obstacle.y + obstacle.height &&
+                    player.y + player.height > obstacle.y
+                ) {
+                    gameRunning = false;
+                    cancelAnimationFrame(animationFrameId);
+                    alert('Game Over!');
+                }
+
+                // Remove off-screen obstacles
+                if (obstacle.x + obstacle.width < 0) {
+                    obstacles.splice(index, 1);
+                }
+            });
+
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        // Controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') {
+                player.dy = -player.speed;
+            } else if (e.key === 'ArrowDown') {
+                player.dy = player.speed;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                player.dy = 0;
+            }
+        });
+
+        // Start game
+        startButton.addEventListener('click', () => {
+            if (!gameRunning) {
+                init();
+            }
+        });
+    </script>
+</body>
+</html>
