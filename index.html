@@ -227,6 +227,12 @@
 
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Camera follow player
+            const translateX = -player.x + canvas.width / 2;
+            ctx.save();
+            ctx.translate(translateX, 0);
+
             player.update();
             player.draw();
 
@@ -236,6 +242,8 @@
                 enemy.update();
                 enemy.draw();
             });
+
+            ctx.restore();
 
             // Generate new platforms as the player moves to the right
             if (player.x > platforms[platforms.length - 1].x - 400) {
